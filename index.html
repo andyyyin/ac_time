@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+	<link rel="stylesheet" href="css/index.css">
+	<script type="text/javascript" src="script/lib/vue.js"></script>
+	<script type="text/javascript" src="script/service.js"></script>
+</head>
+<body>
+	<div style="height: 100vh; display:flex; align-items:center; justify-content:center;">
+		<div id="app">
+			<div style="margin-bottom: 50px;">
+				<span style="font-size: 48px;">{{this.display.hour}} : {{this.display.minute}} : {{this.display.second}}</span>
+			</div>
+			<div style="cursor: pointer; user-select: none; border: 3px solid black; border-radius: 10px;">
+				<div style="padding: 10px 50px; font-size: 30px;" @click="close">
+					CLOSE
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+<script>
+	const {ipcRenderer} = window.require('electron')
+
+	const app = new Vue({
+		el: '#app',
+		data () {
+			return {
+				record: {
+					data: null
+				},
+				startTime: 0,
+				passTime: 0,
+				passAccum: 0,
+				interval: null,
+				display: {
+					hour: 0,
+					minute: 0,
+					second: 0,
+				}
+			}
+		},
+		watch: {
+			passTime () {
+				Object.assign(this.display, timeTransform(this.passTime))
+			}
+		},
+		computed: {
+		},
+		methods: {
+			close () {
+				let endTime = Date.now()
+				// 记录只精确到分钟
+				this.record.data.unshift([Math.floor(this.startTime / 60000), Math.floor(endTime / 60000)])
+				ipcRenderer.send('close', this.record.data)
+			}
+		},
+		created () {
+			this.startTime = Date.now()
+
+			ipcRenderer.on('data-record', (event, record) => {
+				Object.assign(this.record, record)
+				let {data} = this.record
+				let cutTime = new Date().setHours(6, 0, 0, 0)
+				if (cutTime > Date.now()) cutTime -= 1000 * 60 * 60 * 24
+				for (let i = 0; i < data.length; i++) {
+					const [start, end] = data[i]
+					if (start * 60000 < cutTime) break
+					this.passAccum += (end - start) * 60000
+				}
+			})
+			ipcRenderer.send('load')
+
+			this.interval = setInterval(() => {
+				this.passTime = this.passAccum + (Date.now() - this.startTime)
+				ipcRenderer.send('notice-passTime', this.passTime)
+			}, 1000)
+		}
+	})
+</script>
+</html>
