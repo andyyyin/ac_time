@@ -8,8 +8,8 @@
 	<script type="text/javascript" src="script/service.js"></script>
 </head>
 <body>
-	<div style="height: 100vh; display:flex; align-items:center; justify-content:center;">
-		<div id="app">
+	<div id="app" style="height: 100vh; display:flex; align-items:center; justify-content:center;">
+		<div>
 			<div style="margin-bottom: 50px;">
 				<span style="font-size: 48px;">{{this.display.hour}} : {{this.display.minute}} : {{this.display.second}}</span>
 			</div>
@@ -18,6 +18,9 @@
 					CLOSE
 				</div>
 			</div>
+		</div>
+		<div style="position: fixed; top: 0; right: 0; padding: 10px 20px; background-color: darkorange; cursor: pointer;" @click="minimize">
+			MINIMIZE
 		</div>
 	</div>
 </body>
@@ -55,6 +58,9 @@
 				// 记录只精确到分钟
 				this.record.data.unshift([Math.floor(this.startTime / 60000), Math.floor(endTime / 60000)])
 				ipcRenderer.send('close', this.record.data)
+			},
+			minimize () {
+				ipcRenderer.send('minimize')
 			}
 		},
 		created () {

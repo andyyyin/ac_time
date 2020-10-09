@@ -30,6 +30,9 @@ ipcMain.on('close',  async (event, data) => {
 		app.quit()
 	})
 })
+ipcMain.on('minimize',  async (event) => {
+	window.minimize()
+})
 ipcMain.on('notice-passTime',  async (event, passTime) => {
 	let progress = passTime / (1000 * 60 * 60 * 8)
 	let value = progress >= 1 ? 1 : (progress % 0.5) * 2
