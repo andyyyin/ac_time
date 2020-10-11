@@ -8,19 +8,26 @@
 	<script type="text/javascript" src="script/service.js"></script>
 </head>
 <body>
-	<div id="app" style="height: 100vh; display:flex; align-items:center; justify-content:center;">
+	<div id="app" style="height: 100vh; display:flex; align-items:center; justify-content:center; flex-direction: column; user-select: none">
+		<div class="minimize-button" @click="minimize">
+			MINIMIZE
+		</div>
 		<div>
 			<div style="margin-bottom: 50px;">
 				<span style="font-size: 48px;">{{this.display.hour}} : {{this.display.minute}} : {{this.display.second}}</span>
 			</div>
-			<div style="cursor: pointer; user-select: none; border: 3px solid black; border-radius: 10px;">
-				<div style="padding: 10px 50px; font-size: 30px;" @click="close">
-					CLOSE
-				</div>
-			</div>
 		</div>
-		<div style="position: fixed; top: 0; right: 0; padding: 10px 20px; background-color: darkorange; cursor: pointer;" @click="minimize">
-			MINIMIZE
+		<div style="display:flex; align-items: center">
+			<div class="fix-button minus" @click="fixMinus"></div>
+			<div class="fix-value-container" :class="{plus: fixValue > 0, minus: fixValue < 0}">
+				{{fixValueStr}}
+			</div>
+			<div class="fix-button plus" @click="fixPlus"></div>
+		</div>
+		<div class="stop-button" @click="close">
+			<div style="padding: 10px 0; font-size: 30px; color: white">
+				STOP
+			</div>
 		</div>
 	</div>
 </body>
@@ -38,6 +45,7 @@
 				passTime: 0,
 				passAccum: 0,
 				interval: null,
+				fixValue: 0,
 				display: {
 					hour: 0,
 					minute: 0,
@@ -51,17 +59,30 @@
 			}
 		},
 		computed: {
+			fixValueStr () {
+				if (this.fixValue > 0) return '+' + this.fixValue + 'm'
+				if (this.fixValue < 0) return this.fixValue + 'm'
+				return ''
+			}
 		},
 		methods: {
 			close () {
 				let endTime = Date.now()
 				// 记录只精确到分钟
-				this.record.data.unshift([Math.floor(this.startTime / 60000), Math.floor(endTime / 60000)])
+				let newData = [Math.floor(this.startTime / 60000), Math.floor(endTime / 60000)]
+				if (this.fixValue) newData.push(this.fixValue)
+				this.record.data.unshift(newData)
 				ipcRenderer.send('close', this.record.data)
 			},
 			minimize () {
 				ipcRenderer.send('minimize')
-			}
+			},
+			fixPlus () {
+				this.fixValue += 10
+			},
+			fixMinus () {
+				this.fixValue -= 10
+			},
 		},
 		created () {
 			this.startTime = Date.now()
@@ -72,9 +93,9 @@
 				let cutTime = new Date().setHours(6, 0, 0, 0)
 				if (cutTime > Date.now()) cutTime -= 1000 * 60 * 60 * 24
 				for (let i = 0; i < data.length; i++) {
-					const [start, end] = data[i]
+					const [start, end, fix] = data[i]
 					if (start * 60000 < cutTime) break
-					this.passAccum += (end - start) * 60000
+					this.passAccum += (end - start + (fix || 0)) * 60000
 				}
 			})
 			ipcRenderer.send('load')
